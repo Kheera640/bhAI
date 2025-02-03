@@ -69,3 +69,148 @@ You can author your README using Visual Studio Code. Here are some useful editor
 * [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
 **Enjoy!**
+
+## Here's how to run a larger 7B model in your VS Code extension with Ollama:
+
+First, verify the model exists in Ollama:
+
+bash
+Copy
+ollama list
+If you don't see your 7B model, you'll need to:
+
+Pull the 7B model (example for DeepSeek 7B):
+
+bash
+Copy
+ollama pull deepseek-7b
+Modify your extension code:
+
+typescript
+Copy
+// Change the model name in your chat request
+const streamResponse = await ollama.chat({
+  model: 'deepseek-7b', // Use the exact name from Ollama
+  messages: [{ role: 'user', content: userPrompt }],
+  stream: true
+});
+Important considerations for larger models:
+
+System Requirements:
+
+Minimum 16GB RAM (recommended 32GB)
+
+At least 8GB VRAM for GPU acceleration
+
+SSD storage recommended
+
+Performance Optimization:
+
+typescript
+Copy
+// Add these options to your chat request
+const streamResponse = await ollama.chat({
+  model: 'deepseek-7b',
+  messages: [{ role: 'user', content: userPrompt }],
+  stream: true,
+  options: {
+    num_gpu: 1, // Use GPU if available
+    num_thread: 8, // Adjust based on your CPU cores
+    temperature: 0.7 // Control creativity vs determinism
+  }
+});
+Verify Model Compatibility:
+
+Check the model's required context window
+
+Some 7B models need additional parameters:
+
+typescript
+Copy
+options: {
+  num_ctx: 4096, // Context window size
+  stop: ['\n', '###'] // Model-specific stop sequences
+}
+Handle Longer Response Times:
+
+typescript
+Copy
+// Add a loading indicator
+panel.webview.postMessage({ command: 'loading', state: true });
+
+try {
+  // ... existing code ...
+} finally {
+  panel.webview.postMessage({ command: 'loading', state: false });
+}
+Update your webview HTML:
+
+html
+Copy
+<div id="loading" style="display: none;">Generating...</div>
+
+<script>
+window.addEventListener('message', event => {
+  if (event.data.command === 'loading') {
+    document.getElementById('loading').style.display = 
+      event.data.state ? 'block' : 'none';
+  }
+});
+</script>
+Run HTML
+Troubleshooting Tips:
+
+If you get "model not found" errors:
+
+bash
+Copy
+# List all available models
+ollama list
+
+# Search for models
+ollama search deepseek
+For better performance:
+
+bash
+Copy
+# Run Ollama with GPU acceleration
+OLLAMA_NUM_GPU=1 ollama serve
+
+# Allocate more system resources
+OLLAMA_NUM_PARALLEL=4 OLLAMA_MAX_LOADED_MODELS=2 ollama serve
+If responses are slow:
+
+Reduce the context window size (num_ctx)
+
+Use quantization (look for models with -q4 or -q5 suffixes)
+
+Try a smaller prompt template
+
+Example of a production-ready configuration:
+
+typescript
+Copy
+const streamResponse = await ollama.chat({
+  model: 'deepseek-7b:q5_K_M',
+  messages: [{
+    role: 'system',
+    content: 'You are a helpful coding assistant. Keep responses under 500 characters.'
+  }, {
+    role: 'user', 
+    content: userPrompt
+  }],
+  stream: true,
+  options: {
+    num_ctx: 2048,
+    num_gpu: 1,
+    temperature: 0.5,
+    repeat_penalty: 1.2
+  }
+});
+Remember to:
+
+Update your package.json requirements if needed
+
+Add error handling for model-specific limitations
+
+Test with different prompt formats (some 7B models require specific templates)
